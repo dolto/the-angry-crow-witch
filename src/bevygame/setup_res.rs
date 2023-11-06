@@ -231,7 +231,7 @@ pub fn setup(
         false,
     );
 
-    let slime_death_atlas = TextureAtlas::from_grid(slime_death, Vec2::new(32., 32.), 4, 1, None, None);
+    let slime_death_atlas = TextureAtlas::from_grid(slime_death, Vec2::new(32., 32.), 7, 1, None, None);
     let slime_death_handle = texture_atlases.add(slime_death_atlas);
     let slime_death_entity = get_sprite(
         slime_death_handle,
@@ -258,7 +258,7 @@ pub fn setup(
         },
         AnimationTimer(Timer::from_seconds(0.05, TimerMode::Repeating)),
         Vec3::new(0.,-213.5,0.),
-        Vec2::new(32.,32.),
+        Vec2::new(8.,8.),
         Color::from([1., 1., 1.]),
         false,
     );
