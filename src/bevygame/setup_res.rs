@@ -342,7 +342,8 @@ pub fn setup(
         (
             SpriteBundle{
                 texture: handle.clone(),
-                transform: Transform::from_translation(Vec3::new(116., 10., 41.)),
+                transform: Transform::from_translation(Vec3::new(116., 10., 41.))
+                    .with_rotation(Quat::from_euler(EulerRot::XYZ, 0., 0., 0.2)),
                 ..default()
             },
             RollatHandle(0.)

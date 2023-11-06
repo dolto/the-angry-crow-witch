@@ -1,7 +1,6 @@
 use crate::bevygame::bird::BirdPlugin;
 use bevy::{
-    prelude::*,
-    window::{PresentMode, WindowTheme},
+    prelude::*
 };
 use crate::bevygame::witch::WitchPlugin;
 //use bevy_shader_utils::ShaderUtilsPlugin;
