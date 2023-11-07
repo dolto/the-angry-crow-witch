@@ -36,6 +36,12 @@ pub struct Slime {
 pub struct Witch;
 
 #[derive(Component)]
+pub struct TowerPosion;
+
+#[derive(Component)]
+pub struct BridPosion;
+
+#[derive(Component)]
 pub struct WitchFailed(pub f32);
 
 #[derive(Component)]

@@ -8,20 +8,51 @@ use rand::prelude::ThreadRng;
 
 
 fn bird_move(
-    mut query_bird: Query<(&mut Transform, &mut Bird, &mut TextureAtlasSprite)>,
+    mut commands: Commands,
+    mut query_bird: Query<(&mut Transform, &mut Bird, &mut TextureAtlasSprite, Entity)>,
     mut res_tower: ResMut<ResourceTower>,
+    res_posion: Res<ResourcePosion>,
     res_time: Res<Time>,
 ) {
     let move_speed = res_tower.bird_speed * res_time.delta_seconds();
-    for (mut trans, mut brid, mut sprite) in query_bird.iter_mut() {
+    for (mut trans, mut brid, mut sprite, entity) in query_bird.iter_mut() {
         let moving = move_speed * brid.turn;
         if brid.turn > 0. && trans.translation.x > 136. {
             for _ in 0..3 {
                 let posion = res_tower.posions.pop_front();
-                if posion.is_none() || brid.poops.len() >= 3 {
+                let len = brid.poops.len();
+                if posion.is_none() || len >= 3 {
                     break;
                 }
-                brid.poops.push_back(posion.unwrap());
+                let _posi = posion.unwrap();
+                commands.entity(entity).with_children(|p|{
+                    p.spawn(
+                      SpriteBundle{
+                        texture: res_posion.posion.clone(),
+                        sprite: Sprite{
+                            color: match _posi.property {
+                                Stuff::Fire => {
+                                    Color::RED
+                                },
+                                Stuff::Water => {
+                                    Color::BLUE
+                                },
+                                Stuff::Poison => {
+                                    Color::GREEN
+                                },
+                                Stuff::Light =>{
+                                    Color::YELLOW
+                                }
+                            },
+                            custom_size: Some(Vec2::new(8.,8.)),
+                            ..default()
+                        },
+                        transform: Transform::from_translation(Vec3::new(0., 18.+ 10. * len as f32, 0.)),
+                        ..default()
+                      }
+                    ).insert(BridPosion);
+                });
+                brid.poops.push_back(_posi);
             }
             sprite.flip_x = false;
             brid.turn = -1.;
@@ -35,15 +66,16 @@ fn bird_move(
 }
 
 fn bird_pooping(
-    mut command: Commands,
+    mut commands: Commands,
     mut event_reader_keyboard: EventReader<KeyboardInput>,
-    mut query_brid: Query<(&mut Bird, &Transform)>,
+    mut query_brid: Query<(&mut Bird, &Transform, &Children), Without<BridPosion>>,
+    mut query_bp: Query<(&mut Transform, Entity), With<BridPosion>>,
     res_poop: Res<ResourcePoop>,
 ) {
     for ev in event_reader_keyboard.read() {
         if let Some(KeyCode::A) = ev.key_code {
             if ev.state == ButtonState::Pressed{
-                for (mut brid, trans) in query_brid.iter_mut() {
+                for (mut brid, trans, child) in query_brid.iter_mut() {
                     if let Some(poop) = brid.poops.pop_front() {
                         let sprite = match poop.property {
                             Stuff::Fire => res_poop.fire.clone(),
@@ -51,7 +83,15 @@ fn bird_pooping(
                             Stuff::Poison => res_poop.poison.clone(),
                             Stuff::Water => res_poop.water.clone(),
                         };
-                        command.spawn((
+                        for &ch in child.iter(){
+                            if let Ok((mut trans, entity)) = query_bp.get_mut(ch){
+                                trans.translation += Vec3::NEG_Y * 10.;
+                                if trans.translation.y < 10.{
+                                    commands.entity(entity).despawn();
+                                }
+                            }
+                        }
+                        commands.spawn((
                             SpriteBundle {
                                 texture: sprite,
                                 sprite: Sprite {

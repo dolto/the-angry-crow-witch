@@ -4,6 +4,8 @@ use bevy::input::keyboard::KeyboardInput;
 use bevy::prelude::*;
 use crate::bevygame::setup_res::{AnimationIndices, Posion, ResourcePosion, ResourceTower, ResourceWitch, Rollat, RollatHandle, Stuff, Witch, WitchFailed};
 
+use super::setup_res::TowerPosion;
+
 fn spin_rollat( //포션 제조 컨트롤과 애니메이션 관리
     mut commands: Commands,
     mut query_rollat: Query<(&mut Sprite, &Rollat)>,
@@ -191,13 +193,77 @@ fn witch_failed(
     }
 }
 
+fn witch_print_posion(
+    mut commands: Commands,
+    mut len: Local<usize>,
+    mut query_posions: Query<(&mut Sprite, Entity), With<TowerPosion>>,
+    res_tower: Res<ResourceTower>,
+    res_posion: Res<ResourcePosion>
+){
+    if *len != res_tower.posions.len(){
+        let count = res_tower.posions.len();
+        let mut temp: usize = 0;
+        for (mut sprite, entity) in query_posions.iter_mut(){
+            if temp >= count{
+                commands.entity(entity).despawn();
+            }
+            else{
+                match res_tower.posions[temp].property {
+                    Stuff::Fire => {
+                        sprite.color = Color::RED;
+                    },
+                    Stuff::Water => {
+                        sprite.color = Color::BLUE;
+                    },
+                    Stuff::Poison => {
+                        sprite.color = Color::GREEN;
+                    },
+                    Stuff::Light =>{
+                        sprite.color = Color::YELLOW;
+                    }
+                }
+            }
+            temp += 1;
+        }
+        for i in temp..count{
+            commands.spawn(
+                SpriteBundle{
+                    texture: res_posion.posion.clone(),
+                    transform: Transform::from_translation(Vec3::new(84. + (10.*i as f32), -25., 40.)),
+                    sprite: Sprite{
+                        custom_size: Some(Vec2::new(8.,8.)),
+                        color:match res_tower.posions[temp].property {
+                            Stuff::Fire => {
+                                Color::RED
+                            },
+                            Stuff::Water => {
+                                Color::BLUE
+                            },
+                            Stuff::Poison => {
+                                Color::GREEN
+                            },
+                            Stuff::Light =>{
+                                Color::YELLOW
+                            }
+                        },
+                        ..default()
+                    },
+                    ..default()
+                }
+            ).insert(TowerPosion);
+        }
+        *len = res_tower.posions.len();
+    }
+}
+
 pub struct WitchPlugin;
 impl Plugin for WitchPlugin{
     fn build(&self, app: &mut App) {
         app.
             add_systems(Update,(
                 spin_rollat,
-                witch_failed
+                witch_failed,
+                witch_print_posion
                 ));
     }
 }
