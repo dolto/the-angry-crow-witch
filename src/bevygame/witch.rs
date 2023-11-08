@@ -1,10 +1,11 @@
 use std::f32::consts::PI;
-use bevy::input::ButtonState;
+use bevy::{input::ButtonState, audio::PlaybackMode};
 use bevy::input::keyboard::KeyboardInput;
 use bevy::prelude::*;
+use rand::Rng;
 use crate::bevygame::setup_res::{AnimationIndices, Posion, ResourcePosion, ResourceTower, ResourceWitch, Rollat, RollatHandle, Stuff, Witch, WitchFailed};
 
-use super::setup_res::TowerPosion;
+use super::setup_res::{TowerPosion, HandleEffect, ResourceAudio, ResourceImage, Exploer};
 
 fn spin_rollat( //포션 제조 컨트롤과 애니메이션 관리
     mut commands: Commands,
@@ -141,8 +142,8 @@ fn spin_rollat( //포션 제조 컨트롤과 애니메이션 관리
                 if ev.key_code == Some(KeyCode::S){
                     res_push.push = false;
                     rollatsprite.color = Color::rgb(1., 1., 1.);
-                    if res_push.lock{
-                        if handle.0 < PI/2.{
+                    if res_push.lock && res_witch.stuff.is_none(){
+                        if handle.0 < PI/2.{ // 이 각도를 지나기 전에 클릭을 풀면 선택
                             res_witch.stuff = Some(Stuff::Fire);
                         }
                         else if handle.0 < PI {
@@ -170,6 +171,71 @@ fn spin_rollat( //포션 제조 컨트롤과 애니메이션 관리
     }
 }
 
+fn rollat_effect(
+    mut commands: Commands,
+    query_effect: Query<&GlobalTransform, With<HandleEffect>>,
+    mut res_witch: ResMut<ResourceWitch>,
+    res_sound: Res<ResourceAudio>,
+    res_image: Res<ResourceImage>,
+    res_time: Res<Time>,
+    mut get_stronger: Local<i32>
+){
+    if let Some(stuff) = res_witch.stuff.clone(){
+        res_witch.rollat_timer.tick(res_time.delta());
+        if res_witch.rollat_timer.finished(){
+            let trans = query_effect.get_single().unwrap();
+            let mut rng = rand::thread_rng();
+            let color = match stuff {
+                Stuff::Fire => Color::RED,
+                Stuff::Light => Color::YELLOW,
+                Stuff::Poison => Color::GREEN,
+                Stuff::Water => Color::BLUE,
+            };
+            let mut pice = res_image.slime_pice.clone();
+            pice.0.sprite.color = color;
+            pice.0.sprite.custom_size = Some(Vec2::splat(5.));
+            pice.0.transform.translation = trans.translation();
+            commands.spawn(
+                pice
+            ).insert(Exploer(rng.gen_range((-16.)..=16.),rng.gen_range((-32.)..=32.)));
+        }else if *get_stronger < res_witch.stronger{
+            let trans = query_effect.get_single().unwrap();
+            *get_stronger = res_witch.stronger;
+            let mut rng = rand::thread_rng();
+            let color = match stuff {
+                Stuff::Fire => Color::RED,
+                Stuff::Light => Color::YELLOW,
+                Stuff::Poison => Color::GREEN,
+                Stuff::Water => Color::BLUE,
+            };
+            let mut pice = res_image.slime_pice.clone();
+            let count = rng.gen_range(4..10);
+            pice.0.sprite.color = color;
+            pice.0.sprite.custom_size = Some(Vec2::splat(5.));
+            pice.0.transform.translation = trans.translation();
+            commands.spawn(
+                AudioBundle{
+                    source: res_sound.posion_up_sound.clone(),
+                    settings: PlaybackSettings{
+                        speed: res_witch.stronger as f32 / 2. + 1.,
+                        mode: PlaybackMode::Despawn,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }
+            );
+            for _ in 0..count{
+                commands.spawn(
+                    pice.clone()
+                ).insert(Exploer(rng.gen_range((-16.)..=16.),rng.gen_range((-32.)..=32.)));
+            }
+        }
+    }
+    else if res_witch.stronger == 0{
+        *get_stronger = 0;
+    }
+}
+
 fn witch_failed(
     mut commands: Commands,
     mut query_witch: Query<(&mut WitchFailed, &mut TextureAtlasSprite, Entity)>,
@@ -179,12 +245,12 @@ fn witch_failed(
 ){
     for (mut timer, mut sprite, entity) in query_witch.iter_mut(){
         if timer.0 == 0. {
-            sprite.color = Color::from([0.5,0.5,0.5]);
+            //sprite.color = Color::from([0.5,0.5,0.5]);
             res_witch.stuff = None;
             res_posion.lock = false;
         }
         else if timer.0 > 1.1{
-            sprite.color = Color::from([1.,1.,1.]);
+            //sprite.color = Color::from([1.,1.,1.]);
             commands.entity(entity).remove::<WitchFailed>();
             timer.0 = 0.;
             res_posion.lock = true;
@@ -263,7 +329,8 @@ impl Plugin for WitchPlugin{
             add_systems(Update,(
                 spin_rollat,
                 witch_failed,
-                witch_print_posion
+                witch_print_posion,
+                rollat_effect
                 ));
     }
 }

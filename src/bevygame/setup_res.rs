@@ -1,3 +1,4 @@
+use bevy::audio::{PlaybackMode, VolumeLevel, Volume};
 use bevy::prelude::*;
 use std::collections::VecDeque;
 use std::f32::consts::PI;
@@ -49,6 +50,9 @@ pub struct Rollat(pub f32);
 
 #[derive(Component)]
 pub struct RollatHandle(pub f32);
+
+#[derive(Component)]
+pub struct HandleEffect;
 
 #[derive(Component)]
 pub struct Exploer(pub f32, pub f32);
@@ -128,7 +132,17 @@ pub struct ResourceTower {
 pub struct ResourceWitch {
     pub stuff: Option<Stuff>,
     pub property: Option<Stuff>,
-    pub stronger: i32
+    pub stronger: i32,
+    pub rollat_timer: Timer
+}
+
+#[derive(Resource)]
+pub struct ResourceAudio {
+    pub explosion_sound:Handle<AudioSource>,
+    pub posion_up_sound:Handle<AudioSource>,
+    pub slime_daeth_sound:Handle<AudioSource>,
+    pub witch_failed_sound:Handle<AudioSource>,
+    pub throw_poop_sound:Handle<AudioSource>,
 }
 
 #[derive(Event)]
@@ -185,6 +199,25 @@ pub fn setup(
     let slime_pice = asset_server.load("SlimePice.png");
     let boom_img = asset_server.load("Boom.png");
     let posion = asset_server.load("Posion.png");
+
+    let explosion_sound: Handle<AudioSource> = asset_server.load("Audio/Explosion.wav");
+    let music_sound: Handle<AudioSource>  = asset_server.load("Audio/LOOP.mp3");
+    let posion_up_sound: Handle<AudioSource>  = asset_server.load("Audio/Posion Up.wav");
+    let slime_daeth_sound: Handle<AudioSource>  = asset_server.load("Audio/Slime Daeth.wav");
+    let witch_failed_sound: Handle<AudioSource>  = asset_server.load("Audio/WitchFailed.wav");
+    let throw_poop_sound: Handle<AudioSource>  = asset_server.load("Audio/ThrowPoop.mp3");
+
+    commands.spawn(
+        AudioBundle{
+            source: music_sound,
+            settings: PlaybackSettings { 
+                mode: PlaybackMode::Loop,
+                volume: Volume::Relative(VolumeLevel::new(0.5)),
+                ..default()
+            },
+            ..default()
+        }
+    );
 
     let bird_atlas = TextureAtlas::from_grid(bird_img, Vec2::new(16., 16.), 8, 1, None, None);
     let bird_handle = texture_atlases.add(bird_atlas);
@@ -354,7 +387,17 @@ pub fn setup(
             },
             RollatHandle(0.)
         )
-    );
+    ).with_children(|p|{
+        p.spawn(
+            (
+                TransformBundle{
+                    local: Transform::from_translation(Vec3::new(-15., -15., 50.)),
+                    ..default()
+                },
+                HandleEffect
+            )
+        );
+    });
     commands.spawn(witch.clone()).insert(Witch);
     commands.insert_resource(ResourceImage {
         bg1,
@@ -383,6 +426,15 @@ pub fn setup(
             lock: true
         }
     );
+    commands.insert_resource(
+        ResourceAudio{
+            explosion_sound,
+            posion_up_sound,
+            slime_daeth_sound,
+            witch_failed_sound,
+            throw_poop_sound
+        }
+    );
 
     commands.insert_resource(ResourceTower {
         bird_speed: 50.,
@@ -392,7 +444,8 @@ pub fn setup(
     commands.insert_resource(ResourceWitch {
         property: None,
         stronger: 0,
-        stuff: None
+        stuff: None,
+        rollat_timer: Timer::from_seconds(0.05, TimerMode::Repeating)
     })
 }
 

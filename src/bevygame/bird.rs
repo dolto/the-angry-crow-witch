@@ -1,4 +1,5 @@
 use crate::bevygame::setup_res::*;
+use bevy::audio::PlaybackMode;
 use bevy::input::ButtonState;
 use bevy::input::keyboard::KeyboardInput;
 use bevy::prelude::*;
@@ -71,6 +72,7 @@ fn bird_pooping(
     mut query_brid: Query<(&mut Bird, &Transform, &Children), Without<BridPosion>>,
     mut query_bp: Query<(&mut Transform, Entity), With<BridPosion>>,
     res_poop: Res<ResourcePoop>,
+    res_sound: Res<ResourceAudio>
 ) {
     for ev in event_reader_keyboard.read() {
         if let Some(KeyCode::A) = ev.key_code {
@@ -101,6 +103,15 @@ fn bird_pooping(
                                 transform: Transform::from_translation(trans.translation.clone()),
                                 ..default()
                             },
+                            AudioBundle {
+                                source: res_sound.throw_poop_sound.clone(),
+                                settings: PlaybackSettings{
+                                    mode: PlaybackMode::Despawn,
+                                    speed: 1.2,
+                                    ..default()
+                                },
+                                ..default()
+                            },
                             Poop(poop, 0.)
                         ));
                     };
@@ -116,7 +127,8 @@ fn poop_throw(
     query_slime: Query<(&Slime, &TextureAtlasSprite, &Transform, Entity), Without<Poop>>,
     res_image: Res<ResourceImage>,
     res_time: Res<Time>,
-    mut event_writer: EventWriter<EventExplore>
+    mut event_writer: EventWriter<EventExplore>,
+    res_sound: Res<ResourceAudio>
 ) {
     let delta_sec = res_time.delta_seconds();
     let more_speed = delta_sec * 100.;
@@ -144,6 +156,16 @@ fn poop_throw(
                     commands.spawn(
                         death
                     ).insert(Die);
+                    commands.spawn(
+                        AudioBundle{
+                          source: res_sound.slime_daeth_sound.clone(),
+                          settings:PlaybackSettings{
+                              mode: PlaybackMode::Despawn,
+                              ..default()
+                          },
+                          ..default()
+                        }  
+                      );
                     let mut rng = rand::thread_rng();
                     let count = rng.gen_range(3..=10);
                     for _ in 0..count{
@@ -167,7 +189,8 @@ fn poop_explore(
     query_slime: Query<(&Slime, &TextureAtlasSprite, &Transform, Entity)>,
     res_image: Res<ResourceImage>,
     res_poop: Res<ResourcePoop>,
-    mut event_reader_explore: EventReader<EventExplore>
+    mut event_reader_explore: EventReader<EventExplore>,
+    res_sound: Res<ResourceAudio>
 ){
     for ev in event_reader_explore.read(){
         let mut boom = res_poop.boom.clone();
@@ -175,6 +198,16 @@ fn poop_explore(
         commands.spawn(
             boom
         ).insert(Die);
+        commands.spawn(
+          AudioBundle{
+            source: res_sound.explosion_sound.clone(),
+            settings:PlaybackSettings{
+                mode: PlaybackMode::Despawn,
+                ..default()
+            },
+            ..default()
+          }  
+        );
 
         for (slime, sprite, trans, entity) in query_slime.iter(){
             if trans.translation.distance(ev.pos) < ev.stronger && ev.stuff == slime.property{
@@ -184,6 +217,16 @@ fn poop_explore(
                 commands.spawn(
                     death
                 ).insert(Die);
+                commands.spawn(
+                    AudioBundle{
+                      source: res_sound.slime_daeth_sound.clone(),
+                      settings:PlaybackSettings{
+                          mode: PlaybackMode::Despawn,
+                          ..default()
+                      },
+                      ..default()
+                    }  
+                  );
                 let mut rng = rand::thread_rng();
                 let count = rng.gen_range(3..=10);
                 for _ in 0..count{
@@ -216,7 +259,7 @@ fn pice_flying(
     mut query_pice: Query<(Entity, &mut Transform, &mut Exploer)>,
     res_time: Res<Time>
 ){
-    ///슬라임 조각들이 날아가는 효과
+    //슬라임 조각들이 날아가는 효과
     let delta_sec = res_time.delta_seconds();
     for (entity, mut trans, mut ex) in query_pice.iter_mut(){
         trans.translation += Vec3::new(ex.0 * delta_sec, ex.1 * delta_sec, 0.);
