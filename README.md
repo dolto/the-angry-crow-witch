@@ -6,7 +6,8 @@
 
 ### 사용한 소스
 - 새: https://ma9ici4n.itch.io/pixel-art-bird-16x16
-
+- 이모티콘(새똥): https://pixelmeadow.itch.io/emoji
+  
 - 이펙트1: https://kronbits.itch.io/freesfx
 - 이펙트2: https://jdwasabi.itch.io/8-bit-16-bit-sound-effects-pack
 - 이펙트3: https://anthonyturi.itch.io/anthony-mikes-sweetener-sauce
