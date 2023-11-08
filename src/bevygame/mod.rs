@@ -1,15 +1,14 @@
 use crate::bevygame::bird::BirdPlugin;
-use bevy::{
-    prelude::*
-};
+use bevy::prelude::*;
 use crate::bevygame::witch::WitchPlugin;
 //use bevy_shader_utils::ShaderUtilsPlugin;
 
-use self::setup_res::ResourceSetupPlugin;
+use self::{setup_res::ResourceSetupPlugin, slime::SlimePlugin};
 
 mod witch;
 mod bird;
 mod setup_res;
+mod slime;
 
 pub fn run() {
     App::new()
@@ -31,7 +30,8 @@ pub fn run() {
             //ShaderUtilsPlugin,
             ResourceSetupPlugin,
             BirdPlugin,
-            WitchPlugin
+            WitchPlugin,
+            SlimePlugin
         ))
         .run();
 }

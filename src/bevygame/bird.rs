@@ -136,12 +136,13 @@ fn poop_throw(
         trans.translation += Vec3::NEG_Y * poop.1 * delta_sec;
         poop.1 += more_speed;
         let poop_pos = trans.translation;
-        if poop_pos.y < -213.5 {
+        if poop_pos.y < -229.5 {
+            let stronger = (poop.0.stronger as f32 * 32.).max(16.);
             event_writer.send(
                 EventExplore{
                     stuff: poop.0.property.clone(),
-                    pos: poop_pos,
-                    stronger: poop.0.stronger as f32 * 16.
+                    pos: poop_pos + Vec3::Y * stronger / 2.,
+                    stronger: stronger
                 }
             );
             commands.entity(poop_entity).despawn();
@@ -174,10 +175,11 @@ fn poop_throw(
                         pice.0.transform.translation = slime_pos;
                         commands.spawn(
                           pice
-                        ).insert(Exploer(rng.gen_range((16.)..=64.),rng.gen_range((16.)..=64.)));
+                        ).insert(Exploer(rng.gen_range((-64.)..=64.),rng.gen_range((16.)..=64.)));
                     }
                     commands.entity(entity).despawn();
                     commands.entity(poop_entity).despawn();
+                    break;
                 }
             }
         }
@@ -195,6 +197,7 @@ fn poop_explore(
     for ev in event_reader_explore.read(){
         let mut boom = res_poop.boom.clone();
         boom.0.transform.translation = ev.pos;
+        boom.0.sprite.custom_size = Some(Vec2::splat(ev.stronger));
         commands.spawn(
             boom
         ).insert(Die);

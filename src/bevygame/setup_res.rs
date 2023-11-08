@@ -37,6 +37,9 @@ pub struct Slime {
 pub struct Witch;
 
 #[derive(Component)]
+pub struct Tower(pub i32, pub Timer, pub i32);
+
+#[derive(Component)]
 pub struct TowerPosion;
 
 #[derive(Component)]
@@ -72,10 +75,10 @@ impl Clone for AnimationTimer {
 }
 #[derive(Resource)]
 pub struct ResourceImage {
-    pub bg1: Handle<Image>,
-    pub bg2: Handle<Image>,
-    pub bg3: Handle<Image>,
-    pub front: Handle<Image>,
+    // pub bg1: Handle<Image>,
+    // pub bg2: Handle<Image>,
+    // pub bg3: Handle<Image>,
+    // pub front: Handle<Image>,
     pub bird: (SpriteSheetBundle, AnimationIndices, AnimationTimer),
     pub slime: (SpriteSheetBundle, AnimationIndices, AnimationTimer),
     pub slime_death: (SpriteSheetBundle, AnimationIndices, AnimationTimer),
@@ -199,6 +202,7 @@ pub fn setup(
     let slime_pice = asset_server.load("SlimePice.png");
     let boom_img = asset_server.load("Boom.png");
     let posion = asset_server.load("Posion.png");
+    let tower_img = asset_server.load("Map/Tower.png");
 
     let explosion_sound: Handle<AudioSource> = asset_server.load("Audio/Explosion.wav");
     let music_sound: Handle<AudioSource>  = asset_server.load("Audio/LOOP.mp3");
@@ -357,16 +361,25 @@ pub fn setup(
         transform: Transform::from_xyz(0., 0., 24.),
         ..default()
     });
+    commands.spawn(SpriteBundle{
+        texture: tower_img.clone(),
+        sprite: Sprite {
+            custom_size: Some(Vec2::new(393., 851.)),
+            ..default()
+        },
+        transform: Transform::from_xyz(0., 0., 24.),
+        ..default()
+    }).insert(Tower(10,Timer::from_seconds(0.15, TimerMode::Repeating), 0));
     commands.spawn(bird.clone()).insert(Bird {
         poops: VecDeque::with_capacity(3),
         turn: 1.,
     });
-    commands.spawn(slime.clone()).insert(Slime {
-        property: Stuff::Fire,
-        move_max: 3.,
-        move_min: -1.,
-        move_time: Timer::from_seconds(0.8, TimerMode::Repeating),
-    });
+    // commands.spawn(slime.clone()).insert(Slime {
+    //     property: Stuff::Fire,
+    //     move_max: 3.,
+    //     move_min: -1.,
+    //     move_time: Timer::from_seconds(0.8, TimerMode::Repeating),
+    // });
     commands.spawn(
         (
             SpriteBundle{
@@ -400,10 +413,10 @@ pub fn setup(
     });
     commands.spawn(witch.clone()).insert(Witch);
     commands.insert_resource(ResourceImage {
-        bg1,
-        bg2,
-        bg3,
-        front,
+        // bg1,
+        // bg2,
+        // bg3,
+        // front,
         bird,
         rollat,
         handle,
@@ -446,7 +459,17 @@ pub fn setup(
         stronger: 0,
         stuff: None,
         rollat_timer: Timer::from_seconds(0.05, TimerMode::Repeating)
-    })
+    });
+
+    commands.spawn(
+        TextBundle{
+            text: Text::from_section(
+               format!("Score: 0") , 
+               TextStyle {color:Color::BLACK , font_size: 16., ..default()}
+            ),
+            ..Default::default()
+        }
+    );
 }
 
 fn animation_forward(
