@@ -98,7 +98,7 @@ fn spin_rollat( //포션 제조 컨트롤과 애니메이션 관리
             ButtonState::Pressed => {
                 if ev.key_code == Some(KeyCode::S){
                     res_push.push = true;
-                    rollatsprite.color = Color::rgb(0.5, 0.5, 0.5);
+                    rollatsprite.color = Color::rgb(1., 1., 1.);
                     if res_witch.stuff.is_some(){ //재료가 정해졌다면
                         match res_witch.stuff {
                             None => {}
@@ -141,7 +141,7 @@ fn spin_rollat( //포션 제조 컨트롤과 애니메이션 관리
             ButtonState::Released => {
                 if ev.key_code == Some(KeyCode::S){
                     res_push.push = false;
-                    rollatsprite.color = Color::rgb(1., 1., 1.);
+                    rollatsprite.color = Color::rgb(0.7, 0.7, 0.7);
                     if res_push.lock && res_witch.stuff.is_none(){
                         if handle.0 < PI/2.{ // 이 각도를 지나기 전에 클릭을 풀면 선택
                             res_witch.stuff = Some(Stuff::Fire);
@@ -241,16 +241,27 @@ fn witch_failed(
     mut query_witch: Query<(&mut WitchFailed, &mut TextureAtlasSprite, Entity)>,
     mut res_posion: ResMut<ResourcePosion>,
     mut res_witch: ResMut<ResourceWitch>,
-    res_time: Res<Time>
+    res_time: Res<Time>,
+    res_sound: Res<ResourceAudio>
 ){
     for (mut timer, mut sprite, entity) in query_witch.iter_mut(){
         if timer.0 == 0. {
-            //sprite.color = Color::from([0.5,0.5,0.5]);
+            sprite.color = Color::from([0.5,0.5,0.5]);
             res_witch.stuff = None;
             res_posion.lock = false;
+            commands.spawn(
+                AudioBundle{
+                    source: res_sound.witch_failed_sound.clone(),
+                    settings: PlaybackSettings{
+                        mode: PlaybackMode::Despawn,
+                        ..default()
+                    },
+                    ..default()
+                }
+            );
         }
         else if timer.0 > 1.1{
-            //sprite.color = Color::from([1.,1.,1.]);
+            sprite.color = Color::from([1.,1.,1.]);
             commands.entity(entity).remove::<WitchFailed>();
             timer.0 = 0.;
             res_posion.lock = true;
