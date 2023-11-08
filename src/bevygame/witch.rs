@@ -248,6 +248,7 @@ fn witch_failed(
         if timer.0 == 0. {
             sprite.color = Color::from([0.5,0.5,0.5]);
             res_witch.stuff = None;
+            res_witch.stronger = 0;
             res_posion.lock = false;
             commands.spawn(
                 AudioBundle{
