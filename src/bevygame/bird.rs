@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use crate::bevygame::setup_res::*;
 use bevy::audio::PlaybackMode;
 use bevy::input::ButtonState;
@@ -12,17 +14,19 @@ fn bird_move(
     mut commands: Commands,
     mut query_bird: Query<(&mut Transform, &mut Bird, &mut TextureAtlasSprite, Entity)>,
     mut res_tower: ResMut<ResourceTower>,
+    res_image: Res<ResourceImage>,
     res_posion: Res<ResourcePosion>,
     res_time: Res<Time>,
 ) {
-    let move_speed = res_tower.bird_speed * res_time.delta_seconds();
     for (mut trans, mut brid, mut sprite, entity) in query_bird.iter_mut() {
+        let move_speed = (res_tower.bird_speed + brid.stronger[3] as f32 * 1.5) * res_time.delta_seconds();
         let moving = move_speed * brid.turn;
         if brid.turn > 0. && trans.translation.x > 136. {
-            for _ in 0..3 {
+            let more = brid.stronger[2]/10;
+            for _ in 0..(3+more) {
                 let posion = res_tower.posions.pop_front();
                 let len = brid.poops.len();
-                if posion.is_none() || len >= 3 {
+                if posion.is_none() || len >= 3 + more as usize {
                     break;
                 }
                 let _posi = posion.unwrap();
@@ -33,15 +37,19 @@ fn bird_move(
                         sprite: Sprite{
                             color: match _posi.property {
                                 Stuff::Fire => {
+                                    brid.stronger[0] += _posi.stronger;
                                     Color::RED
                                 },
                                 Stuff::Water => {
+                                    brid.stronger[1] += _posi.stronger;
                                     Color::BLUE
                                 },
                                 Stuff::Poison => {
+                                    brid.stronger[2] += _posi.stronger;
                                     Color::GREEN
                                 },
                                 Stuff::Light =>{
+                                    brid.stronger[3] += _posi.stronger;
                                     Color::YELLOW
                                 }
                             },
@@ -62,6 +70,20 @@ fn bird_move(
             brid.turn = 1.;
         }
 
+        if brid.stronger[1] > 10{
+            brid.spawn_timer.tick(res_time.delta());
+            if brid.spawn_timer.finished(){
+                brid.stronger[1] -= 10;
+                let mut clone = res_image.bird.clone();
+                clone.0.transform.translation = trans.translation;
+                commands.spawn(clone).insert(Bird {
+                    poops: VecDeque::with_capacity(3),
+                    turn: brid.turn * -1.,
+                    spawn_timer: Timer::from_seconds(3.6, TimerMode::Repeating),
+                    stronger: [0,0,0,0]
+                }).insert(CloneBird);
+            }
+        }
         trans.translation += Vec3::new(moving, 0., 0.);
     }
 }
@@ -112,7 +134,7 @@ fn bird_pooping(
                                 },
                                 ..default()
                             },
-                            Poop(poop, 0.)
+                            Poop(poop, 0., brid.stronger[0] as f32)
                         ));
                     };
                 }
@@ -131,8 +153,9 @@ fn poop_throw(
     res_sound: Res<ResourceAudio>
 ) {
     let delta_sec = res_time.delta_seconds();
-    let more_speed = delta_sec * 100.;
+    
     for (mut poop, mut trans, poop_entity) in query_poops.iter_mut() {
+        let more_speed = delta_sec * (100. + poop.2);
         trans.translation += Vec3::NEG_Y * poop.1 * delta_sec;
         poop.1 += more_speed;
         let poop_pos = trans.translation;
@@ -277,6 +300,8 @@ fn pice_flying(
 pub struct BirdPlugin;
 impl Plugin for BirdPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, (bird_move, bird_pooping, poop_throw, poop_explore, boom_die, pice_flying));
+        app.add_systems(Update, 
+            (bird_move, bird_pooping, poop_throw, poop_explore, boom_die, pice_flying).run_if(in_state(AppSet::Set))
+        );
     }
 }

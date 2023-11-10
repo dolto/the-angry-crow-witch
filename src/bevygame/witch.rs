@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use rand::Rng;
 use crate::bevygame::setup_res::{AnimationIndices, Posion, ResourcePosion, ResourceTower, ResourceWitch, Rollat, RollatHandle, Stuff, Witch, WitchFailed};
 
-use super::setup_res::{TowerPosion, HandleEffect, ResourceAudio, ResourceImage, Exploer};
+use super::setup_res::{TowerPosion, HandleEffect, ResourceAudio, ResourceImage, Exploer, AppSet};
 
 fn spin_rollat( //포션 제조 컨트롤과 애니메이션 관리
     mut commands: Commands,
@@ -343,6 +343,6 @@ impl Plugin for WitchPlugin{
                 witch_failed,
                 witch_print_posion,
                 rollat_effect
-                ));
+                ).run_if(in_state(AppSet::Set)));
     }
 }

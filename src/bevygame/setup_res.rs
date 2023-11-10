@@ -3,6 +3,14 @@ use bevy::prelude::*;
 use std::collections::VecDeque;
 use std::f32::consts::PI;
 
+#[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, States)]
+pub enum AppSet{
+    #[default]
+    Reset,
+    Set
+}
+
+
 #[derive(Component)]
 pub struct AnimationIndices {
     pub first: usize,
@@ -23,6 +31,8 @@ impl Clone for AnimationIndices {
 pub struct Bird {
     pub poops: VecDeque<Posion>,
     pub turn: f32,
+    pub spawn_timer: Timer,
+    pub stronger: [i32;4]
 }
 
 #[derive(Component)]
@@ -46,6 +56,12 @@ pub struct TowerPosion;
 pub struct BridPosion;
 
 #[derive(Component)]
+pub struct CloneBird;
+
+#[derive(Component)]
+pub struct Score;
+
+#[derive(Component)]
 pub struct WitchFailed(pub f32);
 
 #[derive(Component)]
@@ -64,7 +80,7 @@ pub struct Exploer(pub f32, pub f32);
 pub struct Die;
 
 #[derive(Component)]
-pub struct Poop(pub Posion, pub f32);
+pub struct Poop(pub Posion, pub f32, pub f32);
 
 #[derive(Component, Deref, DerefMut)]
 pub struct AnimationTimer(Timer);
@@ -184,7 +200,12 @@ pub fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+    query_reset: Query<Entity, Without<Window>>,
+    mut next_state: ResMut<NextState<AppSet>>,
 ) {
+    // for entity in query_reset.iter(){
+    //     commands.entity(entity).despawn();
+    // }
     let bg1 = asset_server.load("Map/BG1.png");
     let bg2 = asset_server.load("Map/BG2.png");
     let bg3 = asset_server.load("Map/BG3.png");
@@ -373,6 +394,8 @@ pub fn setup(
     commands.spawn(bird.clone()).insert(Bird {
         poops: VecDeque::with_capacity(3),
         turn: 1.,
+        spawn_timer: Timer::from_seconds(3.6, TimerMode::Repeating),
+        stronger: [0,0,0,0]
     });
     // commands.spawn(slime.clone()).insert(Slime {
     //     property: Stuff::Fire,
@@ -469,7 +492,11 @@ pub fn setup(
             ),
             ..Default::default()
         }
+    ).insert(
+        Score
     );
+
+    next_state.set(AppSet::Set);
 }
 
 fn animation_forward(
@@ -497,7 +524,9 @@ pub struct ResourceSetupPlugin;
 
 impl Plugin for ResourceSetupPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, setup)
+        app
+            .add_state::<AppSet>()
+            .add_systems(OnEnter(AppSet::Reset), setup)
             .add_event::<EventExplore>()
             .add_systems(Update, animation_forward);
     }
